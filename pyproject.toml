@@ -1,6 +1,6 @@
 [project]
-name = "torch-flow-models"
-version = "2025.02.18"
+name = "flowmodels"
+version = "2026.07.10"
 requires-python = ">= 3.11.11"
 dependencies = [
     "torch==2.6.0",
