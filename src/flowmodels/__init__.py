@@ -11,6 +11,7 @@ from flowmodels.controlledode import ControlledODEInversion, ControlledODESolver
 from flowmodels.ddim import DDIMSampler, DDIMScheduler
 from flowmodels.ddpm import DDPM, DDPMSampler, DDPMScheduler
 from flowmodels.dmd import DistributionMatchingDistillation
+from flowmodels.drifting import DriftingModel
 from flowmodels.dsbm import (
     DiffusionSchrodingerBridgeMatching,
     ModifiedVanillaEulerSolver,
