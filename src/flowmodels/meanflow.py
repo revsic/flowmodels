@@ -32,7 +32,10 @@ class MeanFlow(nn.Module, ODEModel, PredictionSupports, SamplingSupports):
 
     # debug purpose
     def _debug_purpose(self):
-        return {**self._debug_from_loss, **getattr(self.velocity_estim, "_debug_purpose", {})}
+        return {
+            **self._debug_from_loss,
+            **getattr(self.velocity_estim, "_debug_purpose", {}),
+        }
 
     def forward(
         self,
