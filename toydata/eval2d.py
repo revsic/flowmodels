@@ -41,6 +41,7 @@ def visualize_2d(
     verbose: Callable[[range], Iterable] | None = None,
     _sigma_data: float = 1.0,
     _save_fig: Path | None = None,
+    _plot_traj: bool = True,
 ):
     gt, prior = dataset
     with torch.no_grad():
@@ -65,13 +66,14 @@ def visualize_2d(
             if _save_fig:
                 plt.savefig(_save_fig / f"{name}-{step}-hist.png")
 
-            for i in torch.randperm(len(x_t))[:30]:
-                p = torch.stack([prior[i]] + [_x_t[i] for _x_t in x_ts])
-                plt.plot(p[:, 0], p[:, 1], "--", color="r")
-                plt.plot(p[-1, 0], p[-1, 1], "->", color="r")
+            if _plot_traj:
+                for i in torch.randperm(len(x_t))[:30]:
+                    p = torch.stack([prior[i]] + [_x_t[i] for _x_t in x_ts])
+                    plt.plot(p[:, 0], p[:, 1], "--", color="r")
+                    plt.plot(p[-1, 0], p[-1, 1], "->", color="r")
 
-            if _save_fig:
-                plt.savefig(_save_fig / f"{name}-{step}-traj.png")
+                if _save_fig:
+                    plt.savefig(_save_fig / f"{name}-{step}-traj.png")
 
 
 class TestMoon2D(TestGaussianMixture1D):
