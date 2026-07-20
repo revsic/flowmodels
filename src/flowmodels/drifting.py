@@ -101,12 +101,110 @@ class DriftingModel(nn.Module, ObjectiveSupports, PredictionSupports, SamplingSu
             # TODO: support for arbitrarily given tensor shapes.
             prior = torch.randn(batch_size, self.prior_dim).to(sample)
         # [B, ...]
+        # TODO: intra-class population support
         x = self.forward(prior, label)
 
         loss = 0.0
         for temp in self.temps:
-            V = self.compute_V(x, sample, temp)
             with torch.no_grad():
-                target = x + V
+                target = x + self.compute_V(x, sample, temp)
+            loss = loss + (x - target).square().mean()
+        return loss
+
+
+class WFlowSinkhornDrift(DriftingModel):
+    """
+    One-Step Generative Modeling via Wasserstein Gradient Flows, Han et al., 2026.
+    """
+
+    def __init__(
+        self,
+        module: nn.Module,
+        prior_dim: int = 32,
+        temps: float | list[float] = 0.05,
+        resample_neg: bool = True,
+        num_iter: int = 1,
+    ):
+        super().__init__(module, prior_dim, temps)
+        self.resample_neg = resample_neg
+        self.num_iter = num_iter
+
+    def _sinkhorn_projection(
+        self,
+        src: torch.Tensor,
+        tgt: torch.Tensor,
+        temp: float,
+        mask_diagonal: bool = False,
+        num_iter: int = 1,
+    ) -> torch.Tensor:
+        bsize, *_ = src.shape
+        # [B, B], quadratic cost
+        C = 0.5 * torch.cdist(src, tgt).square()
+        if mask_diagonal:
+            C.fill_diagonal_(1e6)
+        # [B, B]
+        log_K = -C / temp
+        # [B]
+        # TODO: -logN and -logM initialization for `a` and `b`, respectively.
+        # NOTE: since we do not assume N- and M-axis currently, we set N = M = 1.
+        log_a = torch.zeros(bsize).to(C)
+        log_b = torch.zeros(bsize).to(C)
+        # [B]
+        log_u = torch.zeros_like(log_a)
+        log_v = torch.zeros_like(log_b)
+        for _ in range(num_iter):
+            log_u = log_a - (log_K + log_v).logsumexp(dim=-1)
+            log_v = log_b - (log_K.T + log_u).logsumexp(dim=-1)
+        # [B, B]
+        Pi = torch.exp(log_u[:, None] + log_K + log_v)
+        return (Pi @ tgt) / Pi.sum(dim=-1, keepdim=True).clamp_min(1e-12)
+
+    def compute_V(
+        self,
+        gen: torch.Tensor,
+        pos: torch.Tensor,
+        temp: float,
+        neg: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        mask_diagonal = False
+        if neg is None:
+            mask_diagonal = True
+            neg = gen
+
+        T_pq = self._sinkhorn_projection(gen, pos, temp, False, self.num_iter)
+        T_qq = self._sinkhorn_projection(gen, neg, temp, mask_diagonal, self.num_iter)
+        return T_pq - T_qq
+
+    def loss(
+        self,
+        sample: torch.Tensor,
+        t: torch.Tensor | None = None,
+        prior: torch.Tensor | None = None,
+        label: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        """Compute the loss from the sample.
+        Args:
+            sample: [FloatLike; [B, ...]], training data.
+            prior: [FloatLike; [B, ...]], sample from the source distribution.
+        Returns:
+            [FloatLike; []], loss value.
+        """
+        batch_size, *_ = sample.shape
+        if prior is None:
+            # TODO: support for arbitrarily given tensor shapes.
+            prior = torch.randn(batch_size, self.prior_dim).to(sample)
+        # [B, ...]
+        # TODO: intra-class population support
+        x = self.forward(prior, label)
+
+        neg = None
+        if self.resample_neg:
+            with torch.no_grad():
+                neg = self.forward(torch.randn_like(prior), label)
+
+        loss = 0.0
+        for temp in self.temps:
+            with torch.no_grad():
+                target = x + self.compute_V(x, sample, temp, neg=neg)
             loss = loss + (x - target).square().mean()
         return loss

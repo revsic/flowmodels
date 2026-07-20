@@ -36,6 +36,7 @@ sampled, trajectory = model.sample(torch.randn(...))
 
 | Method | Paper | Imports & Examples |
 |---|---|---|
+| W-Flow | *One-Step Generative Modeling via Wasserstein Gradient Flows*[[arXiv:2605.11755](https://arxiv.org/abs/2605.11755)] | `WFlowSinkhornDrift`<br>[samples/drifting.ipynb](./samples/drifting.ipynb), 4. W-Flow with Sinkhorn divergence |
 | Drifting Model | *Generative Modeling via Drifting*[[arXiv:2602.04770](https://arxiv.org/abs/2602.04770)] | `DriftingModel`<br>[samples/drifting.ipynb](./samples/drifting.ipynb) |
 | AYF-EMD | *Align Your Flow: Scaling Continuous-Time Flow Map Distillation*[[arXiv:2506.14603](https://arxiv.org/abs/2506.14603)] | `AlignYourFlow`<br>[samples/alignyourflow.ipynb](./samples/alignyourflow.ipynb) |
 | MeanFlow | *Mean Flows for One-step Generative Modeling*[[arXiv:2505.13447](https://arxiv.org/abs/2505.13447)] | `MeanFlow`<br>[samples/meanflow.ipynb](./samples/meanflow.ipynb) |
